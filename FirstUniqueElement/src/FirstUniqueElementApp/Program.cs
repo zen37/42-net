@@ -11,7 +11,9 @@ namespace FirstUniqueElement
     {
         static void Main(string[] args)
         {
-            string[] arr = { "apple", "computer", "apple", "banana", "apple" };
+            //string[] arr = { "apple", "computer", "apple", "banana", "apple" };
+
+            string[] arr = ReadArrayFromFile("input.txt");
 
             // Call the separate method to find the first unique element
             string firstUnique = FindFirstUnique(arr);
@@ -50,6 +52,26 @@ namespace FirstUniqueElement
 
             // If we get here, there is no unique element
             return null;
+        }
+
+        private static string[] ReadArrayFromFile(string filePath)
+        {
+            try
+            {
+                const string separator = ",";
+                // Read the file content as a single line
+                string fileContent = File.ReadAllText(filePath);
+
+                // Split the content by commas and trim whitespace
+                return fileContent.Split(separator)
+                                  .Select(item => item.Trim())
+                                  .ToArray();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading file: {ex.Message}");
+                return Array.Empty<string>();
+            }
         }
 
         private static void Write (Dictionary<string, int> d)
