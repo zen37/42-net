@@ -1,5 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
+
 
 using System.Runtime.CompilerServices;
 
@@ -11,9 +14,16 @@ namespace FirstUniqueElement
     {
         static void Main(string[] args)
         {
-            //string[] arr = { "apple", "computer", "apple", "banana", "apple" };
+            // Determine the file path: either from args or from the config file
+            string filePath = args.Length > 0 ? args[0] : GetDefaultFilePath();
 
-            string[] arr = ReadArrayFromFile("input.txt");
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                Console.WriteLine("No input file specified and no default file path found in the configuration.");
+                return;
+            }
+
+            string[] arr = ReadArrayFromFile(filePath);
 
             // Call the separate method to find the first unique element
             string firstUnique = FindFirstUnique(arr);
@@ -74,12 +84,38 @@ namespace FirstUniqueElement
             }
         }
 
-        private static void Write (Dictionary<string, int> d)
+        /// <summary>
+        /// Reads the default file path from appsettings.json.
+        /// </summary>
+        /// <returns>Default file path, or null if the file or key is missing.</returns>
+        private static string GetDefaultFilePath()
         {
-            foreach (var item in d)
+            const string configFile = "appsettings.json";
+
+            try
             {
-                Console.WriteLine($"{item.Key} => {item.Value}");
+                if (File.Exists(configFile))
+                {
+                    string jsonContent = File.ReadAllText(configFile);
+                    var config = JsonSerializer.Deserialize<Config>(jsonContent);
+
+                     return config?.DefaultFilePath ?? string.Empty;
+                }
+                else
+                {
+                    Console.WriteLine($"Configuration file '{configFile}' not found.");
+                }
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading configuration: {ex.Message}");
+            }
+
+            return null;
+        }
+        private class Config
+        {
+            public string DefaultFilePath { get; set; }
         }
     }
 }
