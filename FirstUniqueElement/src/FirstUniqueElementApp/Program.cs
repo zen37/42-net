@@ -146,6 +146,15 @@ internal class Program
     /// </summary>
     internal static string FindFirstUnique(string[] arr)
     {
+        return FindFirstUnique_FIRST(arr);
+        
+        return FindFirstUnique_COMPACT(arr);
+    }
+
+
+
+    internal static string FindFirstUnique_FIRST(string[] arr)
+    {
         if (arr == null || arr.Length == 0)
         {
             return null;
@@ -182,6 +191,25 @@ internal class Program
 
         //if we get here, there is no unique element
         return null;
+    }
+
+    internal static string FindFirstUnique_COMPACT(string[] array)
+    {
+        if (array == null || array.Length == 0)
+        {
+            return null;
+        }
+
+        var counts = strategy == "LINQ"
+            ? array.GroupBy(x => x).ToDictionary(x => x.Key, x => x.Count())
+            : array.Aggregate(new Dictionary<string, int>(), (dict, item) =>
+            {
+                dict.TryGetValue(item, out var count);
+                dict[item] = count + 1;
+                return dict;
+            });
+
+        return array.FirstOrDefault(item => counts[item] == 1);
     }
 
 }
