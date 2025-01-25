@@ -146,11 +146,12 @@ internal class Program
     /// </summary>
     internal static string FindFirstUnique(string[] arr)
     {
-        return FindFirstUnique_FIRST(arr);
-        
-        return FindFirstUnique_COMPACT(arr);
-    }
+        //return FindFirstUnique_FIRST(arr);
 
+        //return FindFirstUnique_COMPACT(arr);
+
+        return FindFirstUnique_MODULAR(arr);
+    }
 
 
     internal static string FindFirstUnique_FIRST(string[] arr)
@@ -210,6 +211,48 @@ internal class Program
             });
 
         return array.FirstOrDefault(item => counts[item] == 1);
+    }
+
+    internal static string FindFirstUnique_MODULAR(string[] arr)
+    {
+        if (arr == null || arr.Length == 0)
+        {
+            return null;
+        }
+
+        var counts = strategy == "LINQ"
+            ? CreateCountsWithLINQ(arr)
+            : CreateCountsManually(arr);
+
+        foreach (var item in arr)
+        {
+            if (counts[item] == 1)
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    private static Dictionary<string, int> CreateCountsWithLINQ(string[] arr)
+    {
+        return arr
+            .GroupBy(x => x)
+            .ToDictionary(g => g.Key, g => g.Count());
+    }
+
+    private static Dictionary<string, int> CreateCountsManually(string[] arr)
+    {
+        var counts = new Dictionary<string, int>();
+        foreach (var item in arr)
+        {
+            if (counts.ContainsKey(item))
+                counts[item]++;
+            else
+                counts[item] = 1;
+        }
+        return counts;
     }
 
 }
