@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent; 
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -146,11 +147,13 @@ internal class Program
     /// </summary>
     internal static string FindFirstUnique(string[] arr)
     {
-        return FindFirstUnique_FIRST(arr);
+        //return FindFirstUnique_FIRST(arr);
 
         //return FindFirstUnique_COMPACT(arr);
 
         //return FindFirstUnique_MODULAR(arr);
+
+        return FindFirstUnique_PARALLEL(arr);
     }
 
 
@@ -253,6 +256,48 @@ internal class Program
                 counts[item] = 1;
         }
         return counts;
+    }
+
+    internal static string FindFirstUnique_PARALLEL(string[] arr)
+    {
+        if (arr == null || arr.Length == 0)
+        {
+            return null;
+        }
+
+        var counts = strategy == "LINQ"
+            ? CreateCountsWithLINQParallel(arr)
+            : CreateCountsManuallyParallel(arr);
+
+        foreach (var item in arr)
+        {
+            if (counts[item] == 1)
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    private static Dictionary<string, int> CreateCountsWithLINQParallel(string[] arr)
+    {
+        return arr
+            .AsParallel() // Parallel LINQ
+            .GroupBy(x => x)
+            .ToDictionary(g => g.Key, g => g.Count());
+    }
+
+    private static Dictionary<string, int> CreateCountsManuallyParallel(string[] arr)
+    {
+        var counts = new ConcurrentDictionary<string, int>();
+
+        Parallel.ForEach(arr, item =>
+        {
+            counts.AddOrUpdate(item, 1, (key, oldValue) => oldValue + 1);
+        });
+
+        return new Dictionary<string, int>(counts); // Convert to standard dictionary if needed
     }
 
 }
