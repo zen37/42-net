@@ -38,7 +38,6 @@ internal class Program
         DateTime startTime = DateTime.Now;
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        string strategy = "LINQ";
         string firstUnique = FindFirstUnique(arr);
         //string firstUnique = FindFirstUnique_V2(arr);
         stopwatch.Stop();
@@ -50,7 +49,7 @@ internal class Program
 
         File.AppendAllText(logFilePath, logMessage);
 
-        if (firstUnique != null)
+        if (!string.IsNullOrEmpty(firstUnique))
         {
             Console.WriteLine("First unique element: " + firstUnique);
         }
