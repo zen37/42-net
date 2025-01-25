@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent; 
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -283,21 +283,44 @@ internal class Program
     private static Dictionary<string, int> CreateCountsWithLINQParallel(string[] arr)
     {
         return arr
-            .AsParallel() // Parallel LINQ
+            .AsParallel()
+            .WithDegreeOfParallelism(Environment.ProcessorCount) // Limit threads
             .GroupBy(x => x)
             .ToDictionary(g => g.Key, g => g.Count());
     }
 
     private static Dictionary<string, int> CreateCountsManuallyParallel(string[] arr)
     {
-        var counts = new ConcurrentDictionary<string, int>();
+        var localDictionaries = new ConcurrentBag<Dictionary<string, int>>();
 
-        Parallel.ForEach(arr, item =>
+        Parallel.ForEach(
+            arr,
+            () => new Dictionary<string, int>(),
+            (item, state, localDict) =>
+            {
+                if (localDict.ContainsKey(item))
+                    localDict[item]++;
+                else
+                    localDict[item] = 1;
+                return localDict;
+            },
+            localDict => localDictionaries.Add(localDict)
+        );
+
+        // Merge results
+        var finalCounts = new Dictionary<string, int>();
+        foreach (var localDict in localDictionaries)
         {
-            counts.AddOrUpdate(item, 1, (key, oldValue) => oldValue + 1);
-        });
+            foreach (var kvp in localDict)
+            {
+                if (finalCounts.ContainsKey(kvp.Key))
+                    finalCounts[kvp.Key] += kvp.Value;
+                else
+                    finalCounts[kvp.Key] = kvp.Value;
+            }
+        }
 
-        return new Dictionary<string, int>(counts); // Convert to standard dictionary if needed
+        return finalCounts;
     }
 
 }
