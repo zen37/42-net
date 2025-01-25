@@ -15,6 +15,7 @@ internal class Program
 {
     private static string strategy;
     private static string defaultFilePath;
+    private static string method;
     private static string separator;
     static void Main(string[] args)
     {
@@ -43,7 +44,7 @@ internal class Program
         stopwatch.Stop();
         double executionTime = stopwatch.Elapsed.TotalMilliseconds;
 
-        string logMessage = $"{startTime:yyyy-MM-dd HH:mm:ss}{separator}{fileName}{separator}{fileSizeInKB:F2}{separator}{strategy}{separator}{executionTime:F2}{separator}{firstUnique}\n";
+        string logMessage = $"{startTime:yyyy-MM-dd HH:mm:ss}{separator}{fileName}{separator}{fileSizeInKB:F2}{separator}{method}{separator}{strategy}{separator}{executionTime:F2}{separator}{firstUnique}\n";
 
         Console.WriteLine($"{startTime:yyyy-MM-dd HH:mm:ss} {separator}duration: {executionTime} ms, First Unique Element: {firstUnique}");
 
@@ -59,43 +60,24 @@ internal class Program
         }
     }
 
-    /// <summary>
-    /// Finds the first element in the array that appears exactly once.
-    /// Returns the unique element, or null if none is found.
-    /// </summary>
-    internal static string FindFirstUnique(string[] arr)
+    private static string[] ReadArrayFromFile(string filePath)
     {
-        if (arr == null || arr.Length == 0)
+        try
         {
-            return null;
+            const string separator = ",";
+            // Read the file content as a single line
+            string fileContent = File.ReadAllText(filePath);
+
+            // Split the content by commas and trim whitespace
+            return fileContent.Split(separator)
+                              .Select(item => item.Trim())
+                              .ToArray();
         }
-
-        var counts = arr
-            .GroupBy(x => x)
-            .ToDictionary(a => a.Key, a => a.Count());
-
-        //var counts = new Dictionary<string, int>();
-
-        // //count occurrences
-        // foreach (var item in arr)
-        // {
-        //     if (counts.ContainsKey(item))
-        //         counts[item]++;
-        //     else
-        //         counts[item] = 1;
-        // }
-
-        //iterate over the array in order and return the first item that has a count of 1
-        foreach (var item in arr)
+        catch (Exception ex)
         {
-            if (counts[item] == 1)
-            {
-                return item;
-            }
+            Console.WriteLine($"Error reading file: {ex.Message}");
+            return Array.Empty<string>();
         }
-
-        //if we get here, there is no unique element
-        return null;
     }
 
     private static void Init()
@@ -107,6 +89,7 @@ internal class Program
             strategy = config.Strategy;
             defaultFilePath = config.DefaultFilePath;
             separator = config.Separator;
+            method = config.Method;
         }
     }
 
@@ -134,6 +117,11 @@ internal class Program
                 throw new ArgumentException("Invalid or missing strategy in configuration.");
             }
 
+            if (string.IsNullOrWhiteSpace(config.Method))
+            {
+                throw new ArgumentException("Invalid or missing method version in configuration.");
+            }
+
             return config;
         }
         catch (Exception ex)
@@ -143,58 +131,20 @@ internal class Program
         }
     }
 
-    private static string[] ReadArrayFromFile(string filePath)
-    {
-        try
-        {
-            const string separator = ",";
-            // Read the file content as a single line
-            string fileContent = File.ReadAllText(filePath);
-
-            // Split the content by commas and trim whitespace
-            return fileContent.Split(separator)
-                              .Select(item => item.Trim())
-                              .ToArray();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error reading file: {ex.Message}");
-            return Array.Empty<string>();
-        }
-    }
-
     private class Config
     {
         public string DefaultFilePath { get; set; }
         public string Separator { get; set; }
         public string Strategy { get; set; }
+        public string Method { get; set; }
     }
 
-    internal static string FindFirstUnique_V1(string[] arr)
-    {
-        if (arr == null || arr.Length == 0)
-        {
-            return null;
-        }
-        // Build a dictionary where the key is the item and the value is the count of how many times it appears
-        var counts = arr
-            .GroupBy(x => x)
-            .ToDictionary(a => a.Key, a => a.Count());
 
-        // Iterate over the array in order and return the first item that has a count of 1
-        foreach (var item in arr)
-        {
-            if (counts[item] == 1)
-            {
-                return item;
-            }
-        }
-
-        // If we get here, there is no unique element
-        return null;
-    }
-
-    internal static string FindFirstUnique_V2(string[] arr)
+    /// <summary>
+    /// Finds the first element in the array that appears exactly once.
+    /// Returns the unique element, or null if none is found.
+    /// </summary>
+    internal static string FindFirstUnique(string[] arr)
     {
         if (arr == null || arr.Length == 0)
         {
@@ -203,16 +153,25 @@ internal class Program
 
         var counts = new Dictionary<string, int>();
 
-        // Count occurrences
-        foreach (var item in arr)
+        if (strategy == "LINQ")
         {
-            if (counts.ContainsKey(item))
-                counts[item]++;
-            else
-                counts[item] = 1;
+            counts = arr
+                .GroupBy(x => x)
+                .ToDictionary(a => a.Key, a => a.Count());
+        }
+        else
+        {
+            //count occurrences
+            foreach (var item in arr)
+            {
+                if (counts.ContainsKey(item))
+                    counts[item]++;
+                else
+                    counts[item] = 1;
+            }
         }
 
-        // Iterate over the array in order and return the first item that has a count of 1
+        //iterate over the array in order and return the first item that has a count of 1
         foreach (var item in arr)
         {
             if (counts[item] == 1)
@@ -221,7 +180,7 @@ internal class Program
             }
         }
 
-        // If we get here, there is no unique element
+        //if we get here, there is no unique element
         return null;
     }
 
