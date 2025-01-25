@@ -22,7 +22,8 @@ internal class Program
         // Determine the file path: either from args or from the config file
         string filePath = args.Length > 0 ? args[0] : defaultFilePath;
         string fileName = Path.GetFileName(filePath);
-        long fileSize = new FileInfo(filePath).Length;
+        long fileSizeInBytes = new FileInfo(filePath).Length;
+        double fileSizeInKB = fileSizeInBytes / 1024.0;
 
         string logFilePath = "duration.log";
 
@@ -37,14 +38,13 @@ internal class Program
         DateTime startTime = DateTime.Now;
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        string strategy = "MANUAL";
+        string strategy = "LINQ";
         string firstUnique = FindFirstUnique(arr);
         //string firstUnique = FindFirstUnique_V2(arr);
-
         stopwatch.Stop();
         double executionTime = stopwatch.Elapsed.TotalMilliseconds;
 
-        string logMessage = $"{startTime:yyyy-MM-dd HH:mm:ss}{separator}{fileName}{separator}{fileSize}{separator}{strategy}{separator}{executionTime}{separator}{firstUnique}\n";
+        string logMessage = $"{startTime:yyyy-MM-dd HH:mm:ss}{separator}{fileName}{separator}{fileSizeInKB:F2}{separator}{strategy}{separator}{executionTime:F2}{separator}{firstUnique}\n";
 
         Console.WriteLine($"{startTime:yyyy-MM-dd HH:mm:ss} {separator}duration: {executionTime} ms, First Unique Element: {firstUnique}");
 
@@ -71,20 +71,20 @@ internal class Program
             return null;
         }
 
-        //    var counts = arr
-        //         .GroupBy(x => x)
-        //         .ToDictionary(a => a.Key, a => a.Count());
+        var counts = arr
+            .GroupBy(x => x)
+            .ToDictionary(a => a.Key, a => a.Count());
 
-        var counts = new Dictionary<string, int>();
+        //var counts = new Dictionary<string, int>();
 
-        //count occurrences
-        foreach (var item in arr)
-        {
-            if (counts.ContainsKey(item))
-                counts[item]++;
-            else
-                counts[item] = 1;
-        }
+        // //count occurrences
+        // foreach (var item in arr)
+        // {
+        //     if (counts.ContainsKey(item))
+        //         counts[item]++;
+        //     else
+        //         counts[item] = 1;
+        // }
 
         //iterate over the array in order and return the first item that has a count of 1
         foreach (var item in arr)
@@ -164,10 +164,6 @@ internal class Program
         }
     }
 
-    /// <summary>
-    /// Reads the default file path from appsettings.json.
-    /// </summary>
-    /// <returns>Default file path, or null if the file or key is missing.</returns>\
     private class Config
     {
         public string DefaultFilePath { get; set; }
