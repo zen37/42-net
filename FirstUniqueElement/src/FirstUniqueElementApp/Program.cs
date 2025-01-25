@@ -146,11 +146,11 @@ internal class Program
     /// </summary>
     internal static string FindFirstUnique(string[] arr)
     {
-        //return FindFirstUnique_FIRST(arr);
+        return FindFirstUnique_FIRST(arr);
 
         //return FindFirstUnique_COMPACT(arr);
 
-        return FindFirstUnique_MODULAR(arr);
+        //return FindFirstUnique_MODULAR(arr);
     }
 
 
