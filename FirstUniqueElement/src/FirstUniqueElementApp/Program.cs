@@ -267,7 +267,9 @@ internal class Program
 
         var counts = strategy == "LINQ"
             ? CreateCountsWithLINQParallel(arr)
-            : CreateCountsManuallyParallel(arr);
+            //: CreateCountsManuallyParallelOptimized(arr);
+            //: CreateCountsManuallyParallel(arr);
+            : CreateCountsManuallyPartitioned(arr);
 
         foreach (var item in arr)
         {
@@ -289,6 +291,19 @@ internal class Program
             .ToDictionary(g => g.Key, g => g.Count());
     }
 
+    private static Dictionary<string, int> CreateCountsManuallyParallelSimple(string[] arr)
+    {
+        var counts = new ConcurrentDictionary<string, int>();
+
+        Parallel.ForEach(arr, item =>
+        {
+            counts.AddOrUpdate(item, 1, (key, oldValue) => oldValue + 1);
+        });
+
+        return new Dictionary<string, int>(counts);
+    }
+
+    //modular-thread-local-dictionaries
     private static Dictionary<string, int> CreateCountsManuallyParallel(string[] arr)
     {
         var localDictionaries = new ConcurrentBag<Dictionary<string, int>>();
@@ -310,6 +325,95 @@ internal class Program
         // Merge results
         var finalCounts = new Dictionary<string, int>();
         foreach (var localDict in localDictionaries)
+        {
+            foreach (var kvp in localDict)
+            {
+                if (finalCounts.ContainsKey(kvp.Key))
+                    finalCounts[kvp.Key] += kvp.Value;
+                else
+                    finalCounts[kvp.Key] = kvp.Value;
+            }
+        }
+
+        return finalCounts;
+    }
+
+    //modular-partitioned-thread-local-dictionaries
+    private static Dictionary<string, int> CreateCountsManuallyParallelOptimized(string[] arr)
+    {
+        // Ensure chunk size is at least 1
+        int chunkSize = Math.Max(1, arr.Length / Environment.ProcessorCount);
+
+        var chunkedResults = new ConcurrentBag<Dictionary<string, int>>();
+
+        Parallel.ForEach(Partitioner.Create(0, arr.Length, chunkSize), range =>
+        {
+            var localCounts = new Dictionary<string, int>();
+            for (int i = range.Item1; i < range.Item2; i++)
+            {
+                var item = arr[i];
+                if (localCounts.ContainsKey(item))
+                    localCounts[item]++;
+                else
+                    localCounts[item] = 1;
+            }
+            chunkedResults.Add(localCounts);
+        });
+
+        // Merge results
+        var finalCounts = new Dictionary<string, int>();
+        foreach (var localDict in chunkedResults)
+        {
+            foreach (var kvp in localDict)
+            {
+                if (finalCounts.ContainsKey(kvp.Key))
+                    finalCounts[kvp.Key] += kvp.Value;
+                else
+                    finalCounts[kvp.Key] = kvp.Value;
+            }
+        }
+
+        return finalCounts;
+    }
+
+    private static Dictionary<string, int> CreateCountsManuallyPartitioned(string[] arr)
+    {
+        if (arr.Length == 0)
+        {
+            return new Dictionary<string, int>();
+        }
+
+        // Set the number of chunks (e.g., divide into 10 subsets)
+        int chunkCount = 10;
+        int chunkSize = (int)Math.Ceiling(arr.Length / (double)chunkCount);
+
+        // Divide the array into chunks
+        var chunks = new List<string[]>();
+        for (int i = 0; i < arr.Length; i += chunkSize)
+        {
+            chunks.Add(arr.Skip(i).Take(chunkSize).ToArray());
+        }
+
+        // Use a ConcurrentBag to collect results from all threads
+        var chunkedResults = new ConcurrentBag<Dictionary<string, int>>();
+
+        // Process each chunk in parallel
+        Parallel.ForEach(chunks, chunk =>
+        {
+            var localCounts = new Dictionary<string, int>();
+            foreach (var item in chunk)
+            {
+                if (localCounts.ContainsKey(item))
+                    localCounts[item]++;
+                else
+                    localCounts[item] = 1;
+            }
+            chunkedResults.Add(localCounts);
+        });
+
+        // Merge results from all thread-local dictionaries
+        var finalCounts = new Dictionary<string, int>();
+        foreach (var localDict in chunkedResults)
         {
             foreach (var kvp in localDict)
             {
