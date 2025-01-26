@@ -141,6 +141,158 @@ foreach (var item in arr)
 
 In general, for large arrays where performance matters, manual dictionary creation is preferred. For smaller datasets or when prioritizing readability, `GroupBy` + `ToDictionary` is fine.
 
+Both implementations of `FindFirstUnique` have their strengths and trade-offs. Here’s a comparison to help determine which is better depending on your context:
+
+---
+
+### **Advantages of Your Version**
+
+```csharp
+internal static string FindFirstUnique(string[] array)
+{
+    if (array == null || array.Length == 0)
+    {
+        return null;
+    }
+
+    var counts = strategy == "LINQ"
+        ? array.GroupBy(x => x).ToDictionary(x => x.Key, x => x.Count())
+        : array.Aggregate(new Dictionary<string, int>(), (dict, item) =>
+        {
+            dict.TryGetValue(item, out var count);
+            dict[item] = count + 1;
+            return dict;
+        });
+
+    return array.FirstOrDefault(item => counts[item] == 1);
+}
+```
+
+1. **Conciseness**:
+   - This version is compact and avoids method fragmentation by embedding both strategies in the main method.
+
+2. **Declarative Code**:
+   - Leverages LINQ and `Aggregate`, making the logic declarative and expressive, especially for `Manual` counting logic.
+
+3. **Single Responsibility**:
+   - The method directly ties the choice of strategy (`LINQ` or `Aggregate`) with the counting logic in a single block.
+
+---
+
+### **Disadvantages of Your Version**
+
+1. **Complexity of `Aggregate`**:
+   - While `Aggregate` is concise, it may be harder to understand for developers unfamiliar with it.
+   - It adds slight performance overhead due to its functional nature and delegate invocation.
+
+2. **Reduced Testability**:
+   - The logic for counting occurrences is embedded in the main method, making it harder to test or reuse outside of `FindFirstUnique`.
+
+3. **Readability**:
+   - Embedding both counting strategies directly in the method increases cognitive load when reading the code, especially for non-LINQ users.
+
+---
+
+### **Advantages of the Previous Modular Version**
+
+```csharp
+internal static string FindFirstUnique(string[] arr)
+{
+    if (arr == null || arr.Length == 0)
+    {
+        return null;
+    }
+
+    var counts = strategy == "LINQ"
+        ? CreateCountsWithLINQ(arr)
+        : CreateCountsManually(arr);
+
+    foreach (var item in arr)
+    {
+        if (counts[item] == 1)
+        {
+            return item;
+        }
+    }
+
+    return null;
+}
+
+private static Dictionary<string, int> CreateCountsWithLINQ(string[] arr)
+{
+    return arr
+        .GroupBy(x => x)
+        .ToDictionary(g => g.Key, g => g.Count());
+}
+
+private static Dictionary<string, int> CreateCountsManually(string[] arr)
+{
+    var counts = new Dictionary<string, int>();
+    foreach (var item in arr)
+    {
+        if (counts.ContainsKey(item))
+            counts[item]++;
+        else
+            counts[item] = 1;
+    }
+    return counts;
+}
+```
+
+1. **Modularity**:
+   - The counting logic is separated into `CreateCountsWithLINQ` and `CreateCountsManually`, making the code easier to read, maintain, and test.
+
+2. **Performance**:
+   - The manual counting logic avoids the overhead of `Aggregate` and is more efficient in tight loops.
+
+3. **Readability**:
+   - It’s easier for developers to follow the flow of the program because each step is modular and self-contained.
+
+4. **Extensibility**:
+   - Adding another counting strategy (e.g., `ParallelLINQ`) is straightforward—just create a new method and update the strategy selection.
+
+---
+
+### **Disadvantages of the Modular Version**
+
+1. **Verbosity**:
+   - Splitting logic into multiple methods increases the verbosity of the code, which may seem unnecessary for a simple use case.
+
+2. **Additional Method Calls**:
+   - The modular version introduces additional method calls, which might slightly impact performance compared to a single compact method.
+
+---
+
+### **Performance Comparison**
+
+1. **LINQ**:
+   - LINQ (`GroupBy` and `ToDictionary`) is expressive but introduces overhead due to deferred execution and materialization of intermediate results.
+
+2. **Manual Counting**:
+   - Using a loop with `TryGetValue` (or similar manual logic) is often faster for large datasets because it avoids the delegate overhead of LINQ.
+
+3. **Aggregate**:
+   - `Aggregate` involves delegate invocations and may be slower compared to a simple loop, especially for larger datasets.
+
+---
+
+### **Which is Better?**
+
+#### **When to Use Your Version (Compact Version)**:
+- **Conciseness** is preferred: The codebase values short, expressive code over modularity.
+- Developers are **familiar with LINQ** and `Aggregate`, so readability isn’t a concern.
+- Performance is **not critical**, and you’re working with small to medium-sized datasets.
+
+#### **When to Use the Modular Version**:
+- **Readability and maintainability** are prioritized: The codebase values modular, testable, and extensible methods.
+- There’s a need for **performance optimization** for large datasets, as manual counting is generally faster than LINQ and `Aggregate`.
+- The code might require **extensions** (e.g., adding new counting strategies in the future).
+
+---
+
+### **Recommendation**
+If performance and clarity are critical, go with the **modular version**. If you’re aiming for brevity and the dataset is small, your compact version is fine. Let me know if you’d like benchmarks or further assistance! 😊
+
 ## Testing
 
 In the project root, run:

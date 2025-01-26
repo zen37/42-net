@@ -1,0 +1,1 @@
+apple,computer,apple,banana,apple,banana,computer
